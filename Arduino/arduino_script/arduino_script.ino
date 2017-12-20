@@ -1,13 +1,23 @@
 // Arduino Script
 
+#include <Ultrasonic.h>
+
 // Direction : 0 => forward, 1 => backward
 int lwd = 2;  // LW direction - black 
 int lwa = 3;  // LW activator - brown
 int rwa = 4;  // RW activator - white
 int rwd = 5;  // RW direction - gray
 
+int trg = 6;  // Ultrasonic trigger pin
+int ech = 7;  // Ultrasonic echo pin
+
 int bzp = 11; // Buzzer pin
 int ifr = 8;  // Infrared pin
+
+int maxd = 6; // Maximum sonar distance
+int ping_delay = 33; // Delay between sonar pings
+
+Ultrasonic ultrasonic(trg, ech); // Sonar dec.
 
 void setup() {  
   // Buzzer pin
@@ -46,16 +56,30 @@ void enable_wheels_lft() {
   digitalWrite(rwd, LOW);
 }
 
+int dist_from_obj = 200; // Distance from nearest object
+
+void ping_sonar() {
+  dist_from_obj = ultrasonic.Ranging(CM);
+}
+
 int blocked() {
-  return digitalRead(ifr) != 1;
+  return digitalRead(ifr) != 1 || (dist_from_obj <= maxd && dist_from_obj != 0);
 }
 
 void forward(int msecs) {
+  int sonar_counter = 0;
+  ping_sonar();
+  
   enable_wheels_fwd();
   while (msecs--) {
+    if (++sonar_counter % ping_delay == 0)
+      ping_sonar();
+      
     if (blocked()) {
       stop();
-      while (blocked());
+      while (blocked())
+        if (++sonar_counter % ping_delay == 0)
+          ping_sonar();
       enable_wheels_fwd();
     }
     delay(1);
@@ -117,12 +141,20 @@ void beep(int times) {
 }
 
 void forward_until_block() {
+  int sonar_counter = 0;
+  ping_sonar();
+  
   enable_wheels_fwd();
   while (1) {
+    if (++sonar_counter % ping_delay == 0)
+      ping_sonar();
+      
     if (blocked()) {
       stop();
       int timer = 1500;
       while (timer && blocked()) {
+        if (++sonar_counter % ping_delay == 0)
+          ping_sonar();
         timer--;
         delay(1);
       }
