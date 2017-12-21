@@ -135,9 +135,8 @@ def panoramic():
     	os.system('fswebcam -r 299x299 --jpeg 85 -S 10 -q img' + str(i+1) + '.jpg')
     	arduino_move('turn_right', 300)
 
-def receive(rcv_socket):
+def receive(rcv_socket, my_socket):
     data = rcv_socket.recv(2048)
-    print(data)
     cmd = list(str(data.decode('utf-8')).lower())
     cmd = ''.join([c for c in cmd if c != '\x00'])
     words = cmd.split(' ')
@@ -169,7 +168,7 @@ def receive(rcv_socket):
         arduino_beep(1)
         time.sleep(1)
         os.system('sudo shutdown -h 0')
-    elif cmd in [ 'reinicie o sistema', 'reinicie' ]:
+    elif cmd in ['reinicie', 'reinicie o sistema']:
         arduino_beep(1)
         time.sleep(1)
         os.system('sudo reboot')
@@ -192,16 +191,15 @@ def receive(rcv_socket):
                 print (res[0] + res[2]) // 2
             else:
                 print 'fail second'
-    else:
-        print 'fail first'
-
+        else:
+            print 'fail first'
     rcv_socket.send('ack'.encode(encoding='utf-8', errors='ignore'))
     rcv_socket.close()
 
 def wait_cmd(my_socket):
     while True:
     	rcv_socket, addr = my_socket.accept()
-    	new_thread = threading.Thread(target=receive, args=(rcv_socket,))
+    	new_thread = threading.Thread(target=receive, args=(rcv_socket, my_socket,))
     	new_thread.start()
     my_socket.close()
 
