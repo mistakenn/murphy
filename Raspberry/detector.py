@@ -50,14 +50,14 @@ arduino_cmds = {
 }
 
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
-socket_num = 3000
+socket_num = 4000
 arduin_com = serial.Serial('/dev/ttyACM0', 9600)
 msecs_per_pixel_lft = 1.5
 msecs_per_pixel_rgt = 1.7
 msecs_per_unit = 10
 
 def log(message):
-    log_file = open('/home/pi/Robotics/ObjDetector/report.log', 'a')
+    log_file = open('/home/pi/Murphy/Raspberry/report.log', 'a')
     log_file.write(message+'\n')
     log_file.close()
 
@@ -87,10 +87,10 @@ def predict(image, net, obj):
     return False
 
 def capture_predict(obj):
-    net = cv2.dnn.readNetFromCaffe('/home/pi/Robotics/ObjDetector/MobileNetSSD_deploy.prototxt', '/home/pi/Robotics/ObjDetector/MobileNetSSD_deploy.caffemodel')
+    net = cv2.dnn.readNetFromCaffe('/home/pi/Murphy/Raspberry/MobileNetSSD_deploy.prototxt', '/home/pi/Murphy/Raspberry/MobileNetSSD_deploy.caffemodel')
     log('[WEBCAM] Taking photo')
-    os.system('fswebcam -r 299x299 --jpeg 85 -S 10 -q /home/pi/Robotics/ObjDetector/teste.jpg')
-    image = cv2.imread('/home/pi/Robotics/ObjDetector/teste.jpg')
+    os.system('fswebcam -r 299x299 --jpeg 85 -S 10 -q /home/pi/Murphy/Raspberry/teste.jpg')
+    image = cv2.imread('/home/pi/Murphy/Raspberry/teste.jpg')
     return predict(image, net, obj)
 
 def arduino_move(action, msecs):
@@ -137,6 +137,7 @@ def panoramic():
 
 def receive(rcv_socket):
     data = rcv_socket.recv(2048)
+    print(data)
     cmd = list(str(data.decode('utf-8')).lower())
     cmd = ''.join([c for c in cmd if c != '\x00'])
     words = cmd.split(' ')
@@ -172,6 +173,28 @@ def receive(rcv_socket):
         arduino_beep(1)
         time.sleep(1)
         os.system('sudo reboot')
+    elif cmd == 'up':
+        arduino_move('forward', 50)
+    elif cmd == 'right':
+        arduino_move('turn_right', 50)
+    elif cmd == 'left':
+        arduino_move('turn_left', 50)
+    elif cmd == 'down':
+        arduino_move('backward', 50)
+    elif cmd == 'fon':
+        arduino_beep(1)
+    elif cmd == 'teste a rotacao':
+        res = capture_predict('person')
+        if res:
+	    centralize(res)
+            res = capture_predict('person')
+            if res:
+                print (res[0] + res[2]) // 2
+            else:
+                print 'fail second'
+    else:
+        print 'fail first'
+
     rcv_socket.send('ack'.encode(encoding='utf-8', errors='ignore'))
     rcv_socket.close()
 
@@ -191,15 +214,3 @@ def init():
     wait_cmd(my_socket)
 
 init()
-
-def test_centralize():
-    res = capture_predict('person')
-    if res:
-	centralize(res)
-        res = capture_predict('person')
-        if res:
-            print (res[0] + res[2]) // 2
-        else:
-            print 'fail second'
-    else:
-        print 'fail'
